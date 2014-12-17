@@ -1,0 +1,6 @@
+target/
+logs/
+
+.DS_Store
+.idea/
+.idea_modules/
