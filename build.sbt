@@ -14,15 +14,16 @@ libraryDependencies ++= Seq(
   "org.mockito" % "mockito-all" % "1.10.8" % "test"
 )
 
-publishMavenStyle := true
 
 publishTo := {
-  val nexus = "https://oss.sonatype.org/"
+  val nexus = "https://nexus.gilt.com/nexus/"
   if (isSnapshot.value)
-    Some("snapshots" at nexus + "content/repositories/snapshots")
+    Some("snapshots" at nexus + "content/repositories/gilt.snapshots")
   else
-    Some("releases"  at nexus + "service/local/staging/deploy/maven2")
+    Some("releases"  at nexus + "content/repositories/internal-releases/")
 }
+
+credentials += Credentials(Path.userHome / ".ivy2" / ".credentials")
 
 publishArtifact in Test := false
 
