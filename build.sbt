@@ -14,6 +14,7 @@ libraryDependencies ++= Seq(
   "org.mockito" % "mockito-all" % "1.10.8" % "test"
 )
 
+releaseSettings
 
 publishTo := {
   val nexus = "https://nexus.gilt.com/nexus/"
