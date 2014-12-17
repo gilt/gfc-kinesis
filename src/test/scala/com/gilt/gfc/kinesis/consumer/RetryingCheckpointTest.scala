@@ -1,11 +1,11 @@
-package com.gilt.gfc.kinesis
+package com.gilt.gfc.kinesis.consumer
 
-import com.amazonaws.services.kinesis.clientlibrary.exceptions.KinesisClientLibDependencyException
-import com.gilt.gfc.kinesis.consumer.RetryingCheckpoint
 
 import scala.concurrent.duration._
 
 import com.amazonaws.services.kinesis.clientlibrary.interfaces.IRecordProcessorCheckpointer
+import com.amazonaws.services.kinesis.clientlibrary.exceptions.KinesisClientLibDependencyException
+
 import org.scalatest._
 import org.scalatest.mock.MockitoSugar
 import org.mockito.Mockito.{doThrow, verify, never, times}
