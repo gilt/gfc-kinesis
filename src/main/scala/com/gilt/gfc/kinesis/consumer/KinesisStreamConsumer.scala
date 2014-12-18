@@ -23,6 +23,9 @@ import com.amazonaws.services.kinesis.model.Record
  * @param executorService to use for processing records - this is passed to, and used by, the underlying Java Amazon library. Defaults to Executors.newCachedThreadPool()
  * @param processBatch A function that is called for each "batch" of records received from the kinesis stream.
  *                     This function may be called from different threads (for different shards), and possibly even concurrently.
+ *                     '''Note''' this function should complete in less time than the configured
+ *                     [[com.gilt.gfc.kinesis.consumer.KinesisClientConfiguration.leaseFailoverTime]] as otherwise
+ *                     the lease could expire while processing is proceeding.
  */
 case class KinesisStreamConsumer(streamName: String,
                                  config: KinesisClientConfiguration,

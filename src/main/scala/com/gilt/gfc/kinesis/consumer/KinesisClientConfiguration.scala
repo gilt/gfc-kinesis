@@ -2,6 +2,8 @@ package com.gilt.gfc.kinesis.consumer
 
 import java.util.UUID
 
+import com.gilt.gfc.logging.Loggable
+
 import scala.concurrent.duration._
 
 import com.amazonaws.auth.{AWSCredentialsProvider, DefaultAWSCredentialsProviderChain}
@@ -12,7 +14,7 @@ import com.amazonaws.services.kinesis.clientlibrary.lib.worker.{InitialPositionI
  *
  * There are some (arguably) reasonable defaults here.
  */
-trait KinesisClientConfiguration {
+trait KinesisClientConfiguration extends Loggable {
   /**
    * Name of the Amazon Kinesis application
    */
@@ -30,8 +32,10 @@ trait KinesisClientConfiguration {
    * Optionally explicitly define the endpoint to be used for Kinesis.
    *
    * If specified, this setting will be used to configure the Amazon Kinesis client to
-   * read from this specified endpoint, overwriting the configured region name (but ONLY for Kinesis -
-   * the DynamoDB and CloudWatch will still use the configured region name.
+   * read from setting, overwriting the configured (as per [[regionName]]) region name (but '''only''' for Kinesis -
+   * the DynamoDB and CloudWatch will still use the configured region name.)
+   *
+   * Defaults to None
    *
    * @return
    */
@@ -40,16 +44,18 @@ trait KinesisClientConfiguration {
   /**
    * Get the AWS CredentialsProvider for Kinesis, etc., access.
    *
-   * Defaults to DefaultAWSCredentialsProviderChain
+   * Defaults to [[com.amazonaws.auth.DefaultAWSCredentialsProviderChain]]
    *
    * @return
    */
   def awsCredentialsProvider: AWSCredentialsProvider = new DefaultAWSCredentialsProviderChain()
 
   /**
-   * Allow for overriding the {@link #awsCredentialsProvider} for connection to Dynamo.
+   * Allow for overriding the [[awsCredentialsProvider]] for connection to Dynamo.
    *
    * This allows the Kinesis stream and lease/checkpoint DynamoDB table to exist in different accounts, etc.
+   *
+   * Defaults to None
    *
    * @return
    */
@@ -57,6 +63,9 @@ trait KinesisClientConfiguration {
 
   /**
    * Used to identify different worker processes - needs to be different for each instance, not just application.
+   *
+   * This value is logged (INFO) when a configuration for a stream is created - this is useful to assist inspection
+   * of the contents of the associated dynamoDB table.
    *
    * Defaults to the string value of a random UUID.
    * @return
@@ -120,11 +129,11 @@ trait KinesisClientConfiguration {
   def maxBatchSize: Int = 1000
 
   /**
-   * One of LATEST or TRIM_HORIZON. The Amazon Kinesis Client Library will start
+   * One of `LATEST` or `TRIM_HORIZON`. The Amazon Kinesis Client Library will start
    * fetching records from this position when the application starts up if there are no checkpoints. If there
    * are checkpoints, we will process records from the checkpoint position.
    *
-   * @return defaults to TRIM_HORIZON
+   * @return defaults to `TRIM_HORIZON`
    */
   def initialPositionInStream: InitialPositionInStream = InitialPositionInStream.TRIM_HORIZON
 
@@ -148,10 +157,20 @@ trait KinesisClientConfiguration {
   /**
    * Whether every empty batch should be passed to the application.
    *
-   * Note, in the case where an application does not checkpoint every batch empty batches may still
-   * be passed to the application, even if this specifies False - however, in that case, empty batches will only
-   * be passed when there has been records passed since the last checkpoint - if no records have been passed, then
-   * no empty batches will be passed on, unless this specified by True here.
+   * The underlying client effectively polls the kinesis stream server periodically - when there are no records
+   * present to be passed to the application this is effectively an empty batch - by default not all these get
+   * passed to the application.
+   *
+   * '''Note''', in the case where an application does not checkpoint every batch, empty batches may still
+   * be passed to the application, even if this specifies `false` - however, in that case, empty batches will only
+   * be passed when there has been records passed since the last checkpoint - if no records have been passed since last
+   * checkpoint then no empty batches will be passed on.
+   *
+   * It is not expected, or necessary, to configure this to `true` - however, it may be useful for certain types of
+   * applications to process
+   *
+   * Defaults to `false`
+   *
    * @return
    */
   def processAllEmptyBatches: Boolean = false
@@ -159,17 +178,24 @@ trait KinesisClientConfiguration {
   /**
    * Create a Kinesis Client Lib Configuration. This is used internally when configuring the Java Kinesis client connections.
    *
+   * The consumer associated with this confguration will be identified by `s"$appName-$streamName"` (this includes
+   * the DynamoDB table, etc.)
+   *
    * @param streamName
    * @return
    */
   final def createStreamConfiguration(streamName: String): KinesisClientLibConfiguration = {
+    val wid = workerId
+    val aname = appName
+    info(s"Application $aname creating a stream configuration for $streamName, with workerId $wid")
+
     val config = new KinesisClientLibConfiguration(
-      s"$appName-$streamName",
+      s"$aname-$streamName",
       streamName,
       awsCredentialsProvider,
       dynamoOverrideAwsCredentialsProvider.getOrElse(awsCredentialsProvider),
       awsCredentialsProvider,
-      workerId
+      wid
     ).withRegionName(regionName)
       .withFailoverTimeMillis(leaseFailoverTime.toMillis)
       .withMaxRecords(maxBatchSize)
