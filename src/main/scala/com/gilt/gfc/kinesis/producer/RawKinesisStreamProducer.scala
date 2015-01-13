@@ -54,7 +54,6 @@ private[producer] class RetryingStreamProducer(streamName: String, config: Kines
   override def putRecord(data: ByteBuffer, partitionKey: PartitionKey, sequenceNumberForOrdering: Option[SequenceNumber] = None)
                         (implicit ec: ExecutionContext): Future[Try[PutResult]] = {
     retry("putRecord", config) { attemptCount =>
-      println(s"OIWNFIOWEMFOIWNEFOUBWEIFNWIOEFNWINFWOIEFNEWOFNENIEWOINFWEOINF $attemptCount")
       Future {
         Try {
           val putRecord = new PutRecordRequest()
