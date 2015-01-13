@@ -6,15 +6,17 @@ import com.amazonaws.AmazonServiceException
 import com.amazonaws.services.kinesis.AmazonKinesis
 import com.amazonaws.services.kinesis.model.{PutRecordRequest, PutRecordResult}
 import org.hamcrest.{Description, BaseMatcher}
+import org.scalatest.concurrent.ScalaFutures
 
 import scala.concurrent.duration._
+import scala.concurrent.ExecutionContext.Implicits.global
 
 import org.scalatest.mock.MockitoSugar
 import org.scalatest.{Matchers, FlatSpec}
 import org.mockito.Mockito.{doReturn, doThrow, verify, times}
 import org.mockito.Matchers.{any, anyString, argThat}
 
-class KinesisStreamProducerSpec extends FlatSpec with Matchers with MockitoSugar {
+class KinesisStreamProducerSpec extends FlatSpec with Matchers with MockitoSugar with ScalaFutures {
   private case class PutRecordRequestMatcher(streamName: String, data: ByteBuffer, partitionKey: PartitionKey, sequenceNumberForOrdering: Option[SequenceNumber] = None) extends BaseMatcher[PutRecordRequest] {
     override def matches(o: scala.Any): Boolean = {
       o match {
@@ -45,9 +47,12 @@ class KinesisStreamProducerSpec extends FlatSpec with Matchers with MockitoSugar
 
     val iut = new RetryingStreamProducer("streamname1", config, kinesis)
 
-    val result = iut.putRecord(mock[ByteBuffer], PartitionKey("somepartitionkey"))
-    result.isSuccess should be (true)
-    result.get should be (PutResult("testshard1", SequenceNumber("myseq123"), 1))
+    val futureResult = iut.putRecord(mock[ByteBuffer], PartitionKey("somepartitionkey"))
+
+    whenReady(futureResult) { result =>
+      result.isSuccess should be(true)
+      result.get should be(PutResult("testshard1", SequenceNumber("myseq123"), 1))
+    }
 
     verify(kinesis, times(1)).putRecord(any[PutRecordRequest])
   }
@@ -65,8 +70,10 @@ class KinesisStreamProducerSpec extends FlatSpec with Matchers with MockitoSugar
     val iut = new RetryingStreamProducer("streamname1", config, kinesis)
 
     val bytes = mock[ByteBuffer]
-    val result = iut.putRecord(bytes, PartitionKey("somepartitionkey"))
-    result.isFailure should be (true)
+    val futureResult = iut.putRecord(bytes, PartitionKey("somepartitionkey"))
+    whenReady(futureResult.failed) { result =>
+      true
+    }
 
     verify(kinesis, times(11)).putRecord(argThat(PutRecordRequestMatcher("streamname1", bytes, PartitionKey("somepartitionkey"))))
   }
@@ -87,9 +94,11 @@ class KinesisStreamProducerSpec extends FlatSpec with Matchers with MockitoSugar
     val iut = new RetryingStreamProducer("streamname1", config, kinesis)
 
     val bytes = mock[ByteBuffer]
-    val result = iut.putRecord(bytes, PartitionKey("somepartitionkey"))
-    result.isSuccess should be (true)
-    result.get should be (PutResult("testshard1", SequenceNumber("myseq123"), 3))
+    val futureResult = iut.putRecord(bytes, PartitionKey("somepartitionkey"))
+    whenReady(futureResult) { result =>
+      result.isSuccess should be(true)
+      result.get should be(PutResult("testshard1", SequenceNumber("myseq123"), 3))
+    }
 
     verify(kinesis, times(3)).putRecord(argThat(PutRecordRequestMatcher("streamname1", bytes, PartitionKey("somepartitionkey"))))
   }
