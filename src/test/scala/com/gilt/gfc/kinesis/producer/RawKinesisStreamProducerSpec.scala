@@ -16,7 +16,7 @@ import org.scalatest.{Matchers, FlatSpec}
 import org.mockito.Mockito.{doReturn, doThrow, verify, times}
 import org.mockito.Matchers.{any, anyString, argThat}
 
-class KinesisStreamProducerSpec extends FlatSpec with Matchers with MockitoSugar with ScalaFutures {
+class RawKinesisStreamProducerSpec extends FlatSpec with Matchers with MockitoSugar with ScalaFutures {
   private case class PutRecordRequestMatcher(streamName: String, data: ByteBuffer, partitionKey: PartitionKey, sequenceNumberForOrdering: Option[SequenceNumber] = None) extends BaseMatcher[PutRecordRequest] {
     override def matches(o: scala.Any): Boolean = {
       o match {
@@ -63,7 +63,7 @@ class KinesisStreamProducerSpec extends FlatSpec with Matchers with MockitoSugar
     val config = mock[KinesisProducerConfig]
 
     doReturn(10).when(config).allowedRetriesOnFailure
-    doReturn(10.milliseconds).when(config).retryBackoffDuration
+    doReturn(5.milliseconds).when(config).retryBackoffDuration
 
     doThrow(new AmazonServiceException("testing")).when(kinesis).putRecord(any[PutRecordRequest])
 

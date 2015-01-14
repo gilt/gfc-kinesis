@@ -34,4 +34,12 @@ trait KinesisProducerConfig {
    * @return
    */
   def retryBackoffDuration: FiniteDuration
+
+  /**
+   * The size of the internal thread pool for placing records onto the kinesis stream. This thread pool is also
+   * used for scheduling and executing retries.
+   *
+   * @return Defaults to 1
+   */
+  def streamPlacementThreadCount: Int = 1
 }

@@ -1,7 +1,7 @@
 package com.gilt.gfc.kinesis.producer
 
 import java.nio.ByteBuffer
-import java.util.concurrent.{TimeUnit, Executors}
+import java.util.concurrent.{ScheduledExecutorService, TimeUnit, Executors}
 
 import com.amazonaws.regions.Regions
 import com.amazonaws.services.kinesis.model.PutRecordRequest
@@ -23,7 +23,8 @@ trait RawKinesisStreamProducer {
    * This method returns a Future of the placement of the single record.
    *
    * It is the responsibility of the caller to ensure correct sequencing/serialisation guarantees - either by explicitly
-   * awaiting on the Future's result, or through Future composition (through Future.flatMap, etc.)
+   * awaiting on the Future's result, or through Future composition (through Future.flatMap, etc.). This still holds even
+   * if the concurrency configuration for this producer is limited to 1, as retries are scheduled asynchronously.
    *
    * @param data
    * @param partitionKey
@@ -32,8 +33,7 @@ trait RawKinesisStreamProducer {
    *                                  for details.
    * @return
    */
-  def putRecord(data: ByteBuffer, partitionKey: PartitionKey, sequenceNumberForOrdering: Option[SequenceNumber] = None)
-               (implicit ec: ExecutionContext): Future[Try[PutResult]]
+  def putRecord(data: ByteBuffer, partitionKey: PartitionKey, sequenceNumberForOrdering: Option[SequenceNumber] = None): Future[Try[PutResult]]
 }
 
 object RawKinesisStreamProducer {
@@ -51,8 +51,10 @@ object RawKinesisStreamProducer {
 
 private[producer] class RetryingStreamProducer(streamName: String, config: KinesisProducerConfig, kinesis: AmazonKinesis) extends RawKinesisStreamProducer with Retry with Loggable {
 
-  override def putRecord(data: ByteBuffer, partitionKey: PartitionKey, sequenceNumberForOrdering: Option[SequenceNumber] = None)
-                        (implicit ec: ExecutionContext): Future[Try[PutResult]] = {
+  override val scheduledExecutor = Executors.newScheduledThreadPool(config.streamPlacementThreadCount)
+  private implicit val executionContext = ExecutionContext.fromExecutor(scheduledExecutor)
+
+  override def putRecord(data: ByteBuffer, partitionKey: PartitionKey, sequenceNumberForOrdering: Option[SequenceNumber] = None): Future[Try[PutResult]] = {
     retry("putRecord", config) { attemptCount =>
       Future {
         Try {
@@ -70,19 +72,22 @@ private[producer] class RetryingStreamProducer(streamName: String, config: Kines
 }
 
 private[producer] trait Retry extends Loggable {
-  private val scheduledExecutor = Executors.newSingleThreadScheduledExecutor()
+  def scheduledExecutor: ScheduledExecutorService
 
   private[producer] def retry[R](desc: String, config: KinesisProducerConfig)(fn: Int => Future[Try[R]])(implicit ec: ExecutionContext): Future[Try[R]] = {
     def recur(previous: Try[R], retryCount: Int): Future[Try[R]] = {
       previous match {
-        case success@Success(_) =>
+        case success@Success(_) => {
           Future.successful(success)
-        case failure@Failure(ex) if retryCount < config.allowedRetriesOnFailure =>
+        }
+        case failure@Failure(ex) if retryCount < config.allowedRetriesOnFailure => {
           error(s"$desc failed, attempting retry in $config.retryBackoffDuration", ex)
+
           val retriedCount = retryCount + 1
           after(config.retryBackoffDuration) {
             fn(retriedCount + 1)
           }.flatMap(identity).flatMap(recur(_, retriedCount))
+        }
       }
     }
 
