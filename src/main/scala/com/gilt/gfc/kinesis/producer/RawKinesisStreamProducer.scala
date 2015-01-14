@@ -55,17 +55,15 @@ private[producer] class RetryingStreamProducer(streamName: String, config: Kines
   private implicit val executionContext = ExecutionContext.fromExecutor(scheduledExecutor)
 
   override def putRecord(data: ByteBuffer, partitionKey: PartitionKey, sequenceNumberForOrdering: Option[SequenceNumber] = None): Future[Try[PutResult]] = {
-    retry("putRecord", config) { attemptCount =>
-      Future {
-        Try {
-          val putRecord = new PutRecordRequest()
-          putRecord.setStreamName(streamName)
-          putRecord.setData(data)
-          putRecord.setPartitionKey(partitionKey.value)
-          sequenceNumberForOrdering.foreach(seqnr => putRecord.setSequenceNumberForOrdering(seqnr.value))
-          val result = kinesis.putRecord(putRecord)
-          PutResult(result.getShardId, SequenceNumber(result.getSequenceNumber), attemptCount)
-        }
+    futureRetry("putRecord", config) { attemptCount =>
+      Try {
+        val putRecord = new PutRecordRequest()
+        putRecord.setStreamName(streamName)
+        putRecord.setData(data)
+        putRecord.setPartitionKey(partitionKey.value)
+        sequenceNumberForOrdering.foreach(seqnr => putRecord.setSequenceNumberForOrdering(seqnr.value))
+        val result = kinesis.putRecord(putRecord)
+        PutResult(result.getShardId, SequenceNumber(result.getSequenceNumber), attemptCount)
       }
     }
   }
@@ -74,7 +72,7 @@ private[producer] class RetryingStreamProducer(streamName: String, config: Kines
 private[producer] trait Retry extends Loggable {
   def scheduledExecutor: ScheduledExecutorService
 
-  private[producer] def retry[R](desc: String, config: KinesisProducerConfig)(fn: Int => Future[Try[R]])(implicit ec: ExecutionContext): Future[Try[R]] = {
+  private[producer] def futureRetry[R](desc: String, config: KinesisProducerConfig)(fn: Int => Try[R])(implicit ec: ExecutionContext): Future[Try[R]] = {
     def recur(previous: Try[R], retryCount: Int): Future[Try[R]] = {
       previous match {
         case success@Success(_) => {
@@ -86,12 +84,12 @@ private[producer] trait Retry extends Loggable {
           val retriedCount = retryCount + 1
           after(config.retryBackoffDuration) {
             fn(retriedCount + 1)
-          }.flatMap(identity).flatMap(recur(_, retriedCount))
+          }.flatMap(recur(_, retriedCount))
         }
       }
     }
 
-    fn(1).flatMap(recur(_, 0))
+    Future(fn(1)).flatMap(recur(_, 0))
   }
 
   private[producer] def after[R](duration: FiniteDuration)(fn: => R): Future[R] = {
