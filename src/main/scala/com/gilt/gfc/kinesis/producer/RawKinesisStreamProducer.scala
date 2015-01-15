@@ -34,14 +34,17 @@ trait RawKinesisStreamProducer {
    * @return
    */
   def putRecord(data: ByteBuffer, partitionKey: PartitionKey, sequenceNumberForOrdering: Option[SequenceNumber] = None): Future[Try[PutResult]]
+
+  def shutdown(): Unit
 }
 
 object RawKinesisStreamProducer {
-  def apply(streamName: String)(implicit config: KinesisProducerConfig): RawKinesisStreamProducer = {
+  def apply(streamName: String, config: KinesisProducerConfig): RawKinesisStreamProducer = {
+    require((config.regionName orElse config.endpoint).isDefined, "At least of 'regionName' or 'endpoint' must be specified")
     val amazonClient = {
       val client = new AmazonKinesisClient(config.awsCredentialsProvider)
-      client.setEndpoint(config.endpoint)
-      client.setRegion(Regions.fromName(config.regionName))
+      config.endpoint.foreach(client.setEndpoint)
+      config.regionName.map(Regions.fromName).foreach(client.setRegion)
       client
     }
 
@@ -53,6 +56,8 @@ private[producer] class RetryingStreamProducer(streamName: String, config: Kines
 
   override val scheduledExecutor = Executors.newScheduledThreadPool(config.streamPlacementThreadCount)
   private implicit val executionContext = ExecutionContext.fromExecutor(scheduledExecutor)
+
+  override def shutdown(): Unit = kinesis.shutdown()
 
   override def putRecord(data: ByteBuffer, partitionKey: PartitionKey, sequenceNumberForOrdering: Option[SequenceNumber] = None): Future[Try[PutResult]] = {
     futureRetry("putRecord", config) { attemptCount =>
