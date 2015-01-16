@@ -1,34 +1,10 @@
 package com.gilt.gfc.kinesis.producer
 
-import com.amazonaws.auth.{DefaultAWSCredentialsProviderChain, AWSCredentialsProvider}
+import com.gilt.gfc.kinesis.common.BaseConfig
 
 import scala.concurrent.duration._
 
-trait KinesisProducerConfig {
-  /**
-   * The AWS region to be used.
-   * This must be a valid AWS region
-   *
-   * At minimal, this or [[endpoint]] must be set - both can be specified.
-   *
-   * @return defaults to None
-   */
-  def regionName: Option[String] = None
-
-  /**
-   * The AWS Endpoint for the Kinesis Stream.
-   *
-   * At minimal, this or [[regionName]] must be set - both can be specified.
-   *
-   * @return defaults to None
-   */
-  def endpoint: Option[String] = None
-
-  /**
-   * The Credentials Provider to be used to access kinesis
-   */
-  def awsCredentialsProvider: AWSCredentialsProvider = new DefaultAWSCredentialsProviderChain()
-
+trait KinesisProducerConfig extends BaseConfig {
   /**
    * How many retries that are allowed to be applied on a failure to put record(s) to the stream.
    * @return Defaults to 3 retries

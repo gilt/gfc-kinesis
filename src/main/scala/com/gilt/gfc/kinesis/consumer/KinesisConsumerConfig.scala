@@ -1,7 +1,7 @@
 package com.gilt.gfc.kinesis.consumer
 
 import java.util.UUID
-
+import com.gilt.gfc.kinesis.common.BaseConfig
 import com.gilt.gfc.logging.Loggable
 
 import scala.concurrent.duration._
@@ -14,19 +14,11 @@ import com.amazonaws.services.kinesis.clientlibrary.lib.worker.{InitialPositionI
  *
  * There are some (arguably) reasonable defaults here.
  */
-trait KinesisClientConfiguration extends Loggable {
+trait KinesisConsumerConfig extends BaseConfig with Loggable {
   /**
    * Name of the Amazon Kinesis application
    */
   def appName: String
-
-  /**
-   * Specify the Amazon region name to be used for each of Kinesis, DynamoDB (for lease table) and CloudWatch metrics.
-   *
-   * Defaults to "us-east-1"
-   * @return
-   */
-  def regionName: String = "us-east-1"
 
   /**
    * Optionally explicitly define the endpoint to be used for Kinesis.
@@ -39,16 +31,7 @@ trait KinesisClientConfiguration extends Loggable {
    *
    * @return
    */
-  def kinesisEndpoint: Option[String] = None
-
-  /**
-   * Get the AWS CredentialsProvider for Kinesis, etc., access.
-   *
-   * Defaults to [[com.amazonaws.auth.DefaultAWSCredentialsProviderChain]]
-   *
-   * @return
-   */
-  def awsCredentialsProvider: AWSCredentialsProvider = new DefaultAWSCredentialsProviderChain()
+  override def kinesisEndpoint: Option[String] = None
 
   /**
    * Allow for overriding the [[awsCredentialsProvider]] for connection to Dynamo.

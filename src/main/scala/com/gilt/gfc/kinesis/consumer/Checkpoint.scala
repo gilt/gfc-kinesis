@@ -1,5 +1,7 @@
 package com.gilt.gfc.kinesis.consumer
 
+import com.gilt.gfc.kinesis.common.SequenceNumber
+
 import scala.concurrent.duration.FiniteDuration
 
 /**
@@ -23,7 +25,7 @@ trait Checkpoint {
    *
    * @param sequenceNumber
    */
-  def apply(sequenceNumber: String): Unit
+  def apply(sequenceNumber: SequenceNumber): Unit
 
   /**
    * The duration since the last checkpoint. This can be used by the application to implement less frequent periodic

@@ -3,6 +3,8 @@ package com.gilt.gfc.kinesis.consumer
 import java.util.concurrent.{ExecutorService, Executors}
 import java.util.{List => JList}
 
+import com.gilt.gfc.kinesis.common.ShardId
+
 import scala.collection.JavaConverters._
 import scala.concurrent.duration._
 
@@ -24,15 +26,15 @@ import com.amazonaws.services.kinesis.model.Record
  * @param processBatch A function that is called for each "batch" of records received from the kinesis stream.
  *                     This function may be called from different threads (for different shards), and possibly even concurrently.
  *                     '''Note''' this function should complete in less time than the configured
- *                     [[com.gilt.gfc.kinesis.consumer.KinesisClientConfiguration.leaseFailoverTime]] as otherwise
+ *                     [[com.gilt.gfc.kinesis.consumer.KinesisConsumerConfig.leaseFailoverTime]] as otherwise
  *                     the lease could expire while processing is proceeding.
  */
-case class KinesisStreamConsumer(streamName: String,
-                                 config: KinesisClientConfiguration,
-                                 executorService: ExecutorService = Executors.newCachedThreadPool())
-                                (processBatch: (Seq[Record], Checkpoint) => Unit) extends Loggable {
+case class RawKinesisStreamConsumer(streamName: String,
+                                    config: KinesisConsumerConfig,
+                                    executorService: ExecutorService = Executors.newCachedThreadPool())
+                                    (processBatch: (Seq[Record], Checkpoint) => Unit) extends Loggable {
   @volatile private var workerOpt: Option[Worker] = None
-  @volatile private var onShardShutdownOpt: Option[(Checkpoint, String) => Unit] = None
+  @volatile private var onShardShutdownOpt: Option[(Checkpoint, ShardId) => Unit] = None
 
   /**
    * Register a function to be called when a shard is being terminated.
@@ -46,7 +48,7 @@ case class KinesisStreamConsumer(streamName: String,
    * @param func A function that will be called on shard termination - this is passed a Checkpoint and the ID of the shard
    *             being terminated.
    */
-  def onShardShutdown(func: (Checkpoint, String) => Unit): Unit = {
+  def onShardShutdown(func: (Checkpoint, ShardId) => Unit): Unit = {
     onShardShutdownOpt.foreach(_ => sys.error("Only allowed to register a single shardShutdown handler"))
     onShardShutdownOpt = Some(func)
   }
@@ -82,13 +84,13 @@ case class KinesisStreamConsumer(streamName: String,
    * Internal implementation of the Amazon Kinesis client library
    */
   private [kinesis] class DelegatingIRecordProcessor extends IRecordProcessor {
-    @volatile private var shardIdOpt: Option[String] = None
+    @volatile private var shardIdOpt: Option[ShardId] = None
     @volatile private var uncheckpointedRecordTimestamp: Option[FiniteDuration] = None
     @volatile private var uncheckpointedCount: Long = 0
 
     override def initialize(shardId: String): Unit = {
       info(s"initialize($streamName.$shardId)")
-      shardIdOpt = Option(shardId)
+      shardIdOpt = Option(ShardId(shardId))
     }
 
     override def shutdown(checkpointer: IRecordProcessorCheckpointer, reason: ShutdownReason): Unit = {
@@ -136,7 +138,7 @@ case class KinesisStreamConsumer(streamName: String,
       }
     }
 
-    private def knownShardId: String = shardIdOpt.getOrElse("<unset>")
+    private def knownShardId: ShardId = shardIdOpt.getOrElse(ShardId("<unset>"))
 
     private def onCheckpoint: Unit = {
       uncheckpointedRecordTimestamp = None

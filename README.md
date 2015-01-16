@@ -3,15 +3,15 @@ gfc-kinesis
 
 A library providing simple Scala API for Amazon Kinesis. Part of the gilt foundation classes
 
-## Raw Stream Consumption
+## Raw Stream Consumer
 
 Package `com.gilt.gfc.kinesis.consumer` provides a lightweight wrapper for Amazon's Java client library (`IRecordProcessorFactory`, etc.) - this includes using DynamoDB for lease/checkpoint coordination of streams (and shards thereof).
 
-    val config = new KinesisClientConfiguration {
+    val config = new KinesisConsumerConfig {
         override def appName = "example-app-name"
     }
 
-    val consumer = KinesisStreamConsumer("example-kinesis-stream-name", config) {
+    val consumer = RawKinesisStreamConsumer("example-kinesis-stream-name", config) {
         (recordBatch, checkpoint) =>
             recordBatch.foreach { record =>
                // Process the Kinesis Record
@@ -42,6 +42,7 @@ Package `com.gilt.gfc.kinesis.producer` provides a lightweight wrapper for produ
     val result = Await.result(futureResult, Duration.Inf)
 
 ## License
-Copyright 2014 Gilt Groupe, Inc.
+
+Copyright 2014-2015 Gilt Groupe, Inc.
 
 Licensed under the Apache License, Version 2.0: http://www.apache.org/licenses/LICENSE-2.0

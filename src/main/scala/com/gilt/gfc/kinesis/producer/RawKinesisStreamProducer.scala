@@ -6,15 +6,13 @@ import java.util.concurrent.{ScheduledExecutorService, TimeUnit, Executors}
 import com.amazonaws.regions.Regions
 import com.amazonaws.services.kinesis.model.PutRecordRequest
 import com.amazonaws.services.kinesis.{AmazonKinesis, AmazonKinesisClient}
+import com.gilt.gfc.kinesis.common.{ShardId, PartitionKey, SequenceNumber}
 import com.gilt.gfc.logging.Loggable
 
 import scala.concurrent.duration.FiniteDuration
 import scala.concurrent.{Promise, Future, ExecutionContext}
 import scala.util.{Failure, Success, Try}
 
-case class PartitionKey(value: String) extends AnyVal
-case class SequenceNumber(value: String) extends AnyVal
-case class PutResult(shardId: String, sequenceNumber: SequenceNumber, attemptCount: Int)
 
 trait RawKinesisStreamProducer {
   /**
@@ -40,11 +38,10 @@ trait RawKinesisStreamProducer {
 
 object RawKinesisStreamProducer {
   def apply(streamName: String, config: KinesisProducerConfig): RawKinesisStreamProducer = {
-    require((config.regionName orElse config.endpoint).isDefined, "At least of 'regionName' or 'endpoint' must be specified")
     val amazonClient = {
       val client = new AmazonKinesisClient(config.awsCredentialsProvider)
-      config.endpoint.foreach(client.setEndpoint)
-      config.regionName.map(Regions.fromName).foreach(client.setRegion)
+      client.setRegion(Regions.fromName(config.regionName))
+      config.kinesisEndpoint.foreach(client.setEndpoint)
       client
     }
 
@@ -68,7 +65,7 @@ private[producer] class RetryingStreamProducer(streamName: String, config: Kines
         putRecord.setPartitionKey(partitionKey.value)
         sequenceNumberForOrdering.foreach(seqnr => putRecord.setSequenceNumberForOrdering(seqnr.value))
         val result = kinesis.putRecord(putRecord)
-        PutResult(result.getShardId, SequenceNumber(result.getSequenceNumber), attemptCount)
+        PutResult(ShardId(result.getShardId), SequenceNumber(result.getSequenceNumber), attemptCount)
       }
     }
   }

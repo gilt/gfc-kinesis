@@ -1,5 +1,7 @@
 package com.gilt.gfc.kinesis.consumer
 
+import com.gilt.gfc.kinesis.common.{SequenceNumber, ShardId}
+
 import scala.concurrent.duration._
 
 import com.gilt.gfc.logging.Loggable
@@ -7,7 +9,7 @@ import com.gilt.gfc.logging.Loggable
 import com.amazonaws.services.kinesis.clientlibrary.exceptions.{KinesisClientLibDependencyException, ShutdownException}
 import com.amazonaws.services.kinesis.clientlibrary.interfaces.IRecordProcessorCheckpointer
 
-private [consumer] case class RetryingCheckpoint(shardId: String,
+private [consumer] case class RetryingCheckpoint(shardId: ShardId,
                                                  checkpointer: IRecordProcessorCheckpointer,
                                                  retryCount: Int,
                                                  backoff: FiniteDuration,
@@ -23,9 +25,9 @@ private [consumer] case class RetryingCheckpoint(shardId: String,
     }
   }
 
-  override def apply(sequenceNumber: String): Unit = withOnCheckpoint {
+  override def apply(sequenceNumber: SequenceNumber): Unit = withOnCheckpoint {
     withRetry {
-      checkpointer.checkpoint(sequenceNumber)
+      checkpointer.checkpoint(sequenceNumber.value)
     }
   }
 

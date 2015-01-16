@@ -1,6 +1,8 @@
 package com.gilt.gfc.kinesis.consumer
 
 
+import com.gilt.gfc.kinesis.common.{SequenceNumber, ShardId}
+
 import scala.concurrent.duration._
 
 import com.amazonaws.services.kinesis.clientlibrary.interfaces.IRecordProcessorCheckpointer
@@ -18,7 +20,7 @@ class RetryingCheckpointTest extends FlatSpec with Matchers with MockitoSugar {
     val checkpointer = mock[IRecordProcessorCheckpointer]
 
     @volatile var callbackIssued = false
-    val iut = RetryingCheckpoint("shard", checkpointer, 3, 10.milliseconds, eldestRecordTS, 10) {
+    val iut = RetryingCheckpoint(ShardId("shard"), checkpointer, 3, 10.milliseconds, eldestRecordTS, 10) {
       callbackIssued = true
     }
 
@@ -33,11 +35,11 @@ class RetryingCheckpointTest extends FlatSpec with Matchers with MockitoSugar {
     val checkpointer = mock[IRecordProcessorCheckpointer]
 
     @volatile var callbackIssued = false
-    val iut = RetryingCheckpoint("shard", checkpointer, 3, 10.milliseconds, eldestRecordTS, 10) {
+    val iut = RetryingCheckpoint(ShardId("shard"), checkpointer, 3, 10.milliseconds, eldestRecordTS, 10) {
       callbackIssued = true
     }
 
-    iut("somesequencenumber")
+    iut(SequenceNumber("somesequencenumber"))
 
     callbackIssued should be (true)
     verify(checkpointer, never).checkpoint()
@@ -50,7 +52,7 @@ class RetryingCheckpointTest extends FlatSpec with Matchers with MockitoSugar {
     doThrow(new KinesisClientLibDependencyException("testing")).when(checkpointer).checkpoint()
 
     @volatile var callbackIssued = false
-    val iut = RetryingCheckpoint("shard", checkpointer, 3, 10.milliseconds, eldestRecordTS, 10) {
+    val iut = RetryingCheckpoint(ShardId("shard"), checkpointer, 3, 10.milliseconds, eldestRecordTS, 10) {
       callbackIssued = true
     }
 

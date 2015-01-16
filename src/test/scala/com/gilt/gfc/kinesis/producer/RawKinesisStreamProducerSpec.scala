@@ -5,6 +5,7 @@ import java.nio.ByteBuffer
 import com.amazonaws.AmazonServiceException
 import com.amazonaws.services.kinesis.AmazonKinesis
 import com.amazonaws.services.kinesis.model.{PutRecordRequest, PutRecordResult}
+import com.gilt.gfc.kinesis.common.{ShardId, PartitionKey, SequenceNumber}
 import org.hamcrest.{Description, BaseMatcher}
 import org.scalatest.concurrent.ScalaFutures
 
@@ -51,7 +52,7 @@ class RawKinesisStreamProducerSpec extends FlatSpec with Matchers with MockitoSu
 
     whenReady(futureResult) { result =>
       result.isSuccess should be(true)
-      result.get should be(PutResult("testshard1", SequenceNumber("myseq123"), 1))
+      result.get should be(PutResult(ShardId("testshard1"), SequenceNumber("myseq123"), 1))
     }
 
     verify(kinesis, times(1)).putRecord(any[PutRecordRequest])
@@ -97,7 +98,7 @@ class RawKinesisStreamProducerSpec extends FlatSpec with Matchers with MockitoSu
     val futureResult = iut.putRecord(bytes, PartitionKey("somepartitionkey"))
     whenReady(futureResult) { result =>
       result.isSuccess should be(true)
-      result.get should be(PutResult("testshard1", SequenceNumber("myseq123"), 3))
+      result.get should be(PutResult(ShardId("testshard1"), SequenceNumber("myseq123"), 3))
     }
 
     verify(kinesis, times(3)).putRecord(argThat(PutRecordRequestMatcher("streamname1", bytes, PartitionKey("somepartitionkey"))))
