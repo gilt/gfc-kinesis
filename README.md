@@ -8,7 +8,7 @@ A library providing simple Scala API for Amazon Kinesis. Part of the gilt founda
 Package `com.gilt.gfc.kinesis.consumer` provides a lightweight wrapper for Amazon's Java client library (`IRecordProcessorFactory`, etc.) - this includes using DynamoDB for lease/checkpoint coordination of streams (and shards thereof).
 
     val config = new KinesisConsumerConfig {
-        override def appName = "example-app-name"
+        override val appName = "example-app-name"
     }
 
     val consumer = RawKinesisStreamConsumer("example-kinesis-stream-name", config) {
@@ -30,14 +30,14 @@ Package `com.gilt.gfc.kinesis.consumer` provides a lightweight wrapper for Amazo
 Package `com.gilt.gfc.kinesis.producer` provides a lightweight wrapper for producing events into a kinesis stream.
 
     val config = new KinesisProducerConfig {
-        override val regionName = Some("us-east-1")
+        override val regionName = "us-east-1"
     }
-    
+
     val producer = RawKinesisStreamProducer("example-kinesis-stream-name", config)
-    
+
     val futureResult = producer.putRecord(ByteBuffer.wrap("hello world".getBytes), )
                                           PartitionKey("some partition key value"))
-                                          
+
     // Simple example only
     val result = Await.result(futureResult, Duration.Inf)
 
