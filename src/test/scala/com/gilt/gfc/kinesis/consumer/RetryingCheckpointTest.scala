@@ -2,6 +2,7 @@ package com.gilt.gfc.kinesis.consumer
 
 
 import com.gilt.gfc.kinesis.common.{SequenceNumber, ShardId}
+import com.gilt.gfc.kinesis.consumer.raw.RetryingCheckpoint
 
 import scala.concurrent.duration._
 

@@ -1,6 +1,7 @@
 package com.gilt.gfc.kinesis.consumer
 
 import com.gilt.gfc.kinesis.common.ShardId
+import com.gilt.gfc.kinesis.consumer.raw.{RawKinesisStreamConsumer, Checkpoint}
 
 import scala.concurrent.duration._
 

@@ -1,19 +1,18 @@
-package com.gilt.gfc.kinesis.consumer
+package com.gilt.gfc.kinesis.consumer.raw
 
 import java.util.concurrent.{ExecutorService, Executors}
 import java.util.{List => JList}
-
-import com.gilt.gfc.kinesis.common.ShardId
-
-import scala.collection.JavaConverters._
-import scala.concurrent.duration._
-
-import com.gilt.gfc.logging.Loggable
 
 import com.amazonaws.services.kinesis.clientlibrary.interfaces.{IRecordProcessor, IRecordProcessorCheckpointer, IRecordProcessorFactory}
 import com.amazonaws.services.kinesis.clientlibrary.lib.worker.Worker
 import com.amazonaws.services.kinesis.clientlibrary.types.ShutdownReason
 import com.amazonaws.services.kinesis.model.Record
+import com.gilt.gfc.kinesis.common.ShardId
+import com.gilt.gfc.kinesis.consumer.KinesisConsumerConfig
+import com.gilt.gfc.logging.Loggable
+
+import scala.collection.JavaConverters._
+import scala.concurrent.duration._
 
 /**
  * A Consumer of data from a Kinesis Stream.

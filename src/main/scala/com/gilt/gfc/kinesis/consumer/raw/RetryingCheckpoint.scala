@@ -1,13 +1,11 @@
-package com.gilt.gfc.kinesis.consumer
-
-import com.gilt.gfc.kinesis.common.{SequenceNumber, ShardId}
-
-import scala.concurrent.duration._
-
-import com.gilt.gfc.logging.Loggable
+package com.gilt.gfc.kinesis.consumer.raw
 
 import com.amazonaws.services.kinesis.clientlibrary.exceptions.{KinesisClientLibDependencyException, ShutdownException}
 import com.amazonaws.services.kinesis.clientlibrary.interfaces.IRecordProcessorCheckpointer
+import com.gilt.gfc.kinesis.common.{SequenceNumber, ShardId}
+import com.gilt.gfc.logging.Loggable
+
+import scala.concurrent.duration._
 
 private [consumer] case class RetryingCheckpoint(shardId: ShardId,
                                                  checkpointer: IRecordProcessorCheckpointer,

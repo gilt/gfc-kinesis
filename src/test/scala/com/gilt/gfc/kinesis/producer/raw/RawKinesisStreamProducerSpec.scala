@@ -1,30 +1,29 @@
-package com.gilt.gfc.kinesis.producer
+package com.gilt.gfc.kinesis.producer.raw
 
 import java.nio.ByteBuffer
 
 import com.amazonaws.AmazonServiceException
 import com.amazonaws.services.kinesis.AmazonKinesis
 import com.amazonaws.services.kinesis.model.{PutRecordRequest, PutRecordResult}
-import com.gilt.gfc.kinesis.common.{ShardId, PartitionKey, SequenceNumber}
-import org.hamcrest.{Description, BaseMatcher}
+import com.gilt.gfc.kinesis.common.{PartitionKey, SequenceNumber, ShardId}
+import com.gilt.gfc.kinesis.producer.KinesisProducerConfig
+import org.hamcrest.{BaseMatcher, Description}
+import org.mockito.Matchers.{any, argThat}
+import org.mockito.Mockito.{doReturn, doThrow, times, verify}
 import org.scalatest.concurrent.ScalaFutures
+import org.scalatest.mock.MockitoSugar
+import org.scalatest.{FlatSpec, Matchers}
 
 import scala.concurrent.duration._
-import scala.concurrent.ExecutionContext.Implicits.global
-
-import org.scalatest.mock.MockitoSugar
-import org.scalatest.{Matchers, FlatSpec}
-import org.mockito.Mockito.{doReturn, doThrow, verify, times}
-import org.mockito.Matchers.{any, anyString, argThat}
 
 class RawKinesisStreamProducerSpec extends FlatSpec with Matchers with MockitoSugar with ScalaFutures {
-  private case class PutRecordRequestMatcher(streamName: String, data: ByteBuffer, partitionKey: PartitionKey, sequenceNumberForOrdering: Option[SequenceNumber] = None) extends BaseMatcher[PutRecordRequest] {
+  private case class PutRecordRequestMatcher(streamName: String, data: Array[Byte], partitionKey: PartitionKey, sequenceNumberForOrdering: Option[SequenceNumber] = None) extends BaseMatcher[PutRecordRequest] {
     override def matches(o: scala.Any): Boolean = {
       o match {
         case request: PutRecordRequest =>
           request.getPartitionKey == partitionKey.value &&
           request.getStreamName == streamName &&
-          request.getData == data &&
+          request.getData.array== data &&
           sequenceNumberForOrdering.fold(true)(_.value == request.getSequenceNumberForOrdering)
         case _ => false
       }
@@ -35,7 +34,7 @@ class RawKinesisStreamProducerSpec extends FlatSpec with Matchers with MockitoSu
     }
   }
 
-  "A KinesisStreamProducer" should "successfully put record" in {
+  "A RawKinesisStreamProducer" should "successfully put record" in {
     val kinesis = mock[AmazonKinesis]
 
     val config = mock[KinesisProducerConfig]
@@ -48,7 +47,9 @@ class RawKinesisStreamProducerSpec extends FlatSpec with Matchers with MockitoSu
 
     val iut = new RetryingStreamProducer("streamname1", config, kinesis)
 
-    val futureResult = iut.putRecord(mock[ByteBuffer], PartitionKey("somepartitionkey"))
+    val rawRecord = RawRecord("hi earth".getBytes, PartitionKey("some partition key"))
+
+    val futureResult = iut.putRecord(rawRecord)
 
     whenReady(futureResult) { result =>
       result.isSuccess should be(true)
@@ -70,8 +71,8 @@ class RawKinesisStreamProducerSpec extends FlatSpec with Matchers with MockitoSu
 
     val iut = new RetryingStreamProducer("streamname1", config, kinesis)
 
-    val bytes = mock[ByteBuffer]
-    val futureResult = iut.putRecord(bytes, PartitionKey("somepartitionkey"))
+    val bytes = "dia dhuit an domhain".getBytes
+    val futureResult = iut.putRecord(RawRecord(bytes, PartitionKey("somepartitionkey")))
     whenReady(futureResult.failed) { result =>
       true
     }
@@ -94,8 +95,8 @@ class RawKinesisStreamProducerSpec extends FlatSpec with Matchers with MockitoSu
 
     val iut = new RetryingStreamProducer("streamname1", config, kinesis)
 
-    val bytes = mock[ByteBuffer]
-    val futureResult = iut.putRecord(bytes, PartitionKey("somepartitionkey"))
+    val bytes = "hello world".getBytes
+    val futureResult = iut.putRecord(RawRecord(bytes, PartitionKey("somepartitionkey")))
     whenReady(futureResult) { result =>
       result.isSuccess should be(true)
       result.get should be(PutResult(ShardId("testshard1"), SequenceNumber("myseq123"), 3))

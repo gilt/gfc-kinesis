@@ -1,4 +1,4 @@
-package com.gilt.gfc.kinesis.consumer
+package com.gilt.gfc.kinesis.consumer.raw
 
 import com.gilt.gfc.kinesis.common.SequenceNumber
 
