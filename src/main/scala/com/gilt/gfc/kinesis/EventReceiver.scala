@@ -126,7 +126,22 @@ private[kinesis] class EventReceiverImpl[T](streamName: String,
 
   private def processBatch(batch: Seq[Record], checkpoint: Checkpoint): Unit = {
 
+    // Use a copy of the seq of consumers, to allow dynamic register/unregister to take place during this processing
+    // without fear of deadlock, etc.
+    val localConsumers = consumersMutex.synchronized(Seq(consumers:_*))
+
     def processRecord(record: Record): Unit = {
+
+      def handleEvent(event: T): Unit = {
+        Try {
+          localConsumers.foreach {
+            case Left(consumerFn) => consumerFn(event)
+            case Right(consumer) => consumer.onEvent(event)
+          }
+        }.recover {
+          case e: Exception => errorHandler(e)
+        }
+      }
 
       def onConvertedRecord(converted: T): Unit = {
         handleEvent(converted)
@@ -145,17 +160,5 @@ private[kinesis] class EventReceiverImpl[T](streamName: String,
     if (checkpointingStrategy.onBatchStart()) checkpoint()
     batch.foreach(processRecord)
     if (checkpointingStrategy.afterBatch(checkpoint.age, checkpoint.size)) checkpoint()
-  }
-
-  private def handleEvent(event: T): Unit = {
-    try {
-      consumersMutex.synchronized {
-        consumers.foreach { eitherConsumer =>
-          eitherConsumer.fold(_(event), _.onEvent(event))
-        }
-      }
-    } catch {
-      case NonFatal(e: Exception) => errorHandler(e)
-    }
   }
 }
