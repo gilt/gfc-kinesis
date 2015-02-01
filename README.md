@@ -1,4 +1,4 @@
-Ggfc-kinesis
+gfc-kinesis
 ===========
 
 A library providing simple Scala API for Amazon Kinesis, for event publishers and consumers. This library is part of the gilt foundation classes.
