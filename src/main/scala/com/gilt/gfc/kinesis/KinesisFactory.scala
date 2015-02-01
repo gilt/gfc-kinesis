@@ -3,7 +3,7 @@ package com.gilt.gfc.kinesis
 import java.util.concurrent.{Executors, ExecutorService}
 
 import com.gilt.gfc.kinesis.consumer.{EventReceiverImpl, EventReceiver, KinesisConsumerConfig, CheckpointingStrategy}
-import com.gilt.gfc.kinesis.publisher.{KinesisPublisherConfig, EventPublisherImpl, EventPublisher, RawRecord}
+import com.gilt.gfc.kinesis.publisher._
 
 import scala.concurrent.duration.DurationInt
 
@@ -52,7 +52,8 @@ object KinesisFactory extends KinesisFactory {
   def newPublisher[T](streamName: String,
                       config: KinesisPublisherConfig,
                       convert: T => RawRecord): EventPublisher[T] = {
-    new EventPublisherImpl[T](streamName, config, convert)
+    val producer = RawKinesisStreamPublisher(streamName, config)
+    new EventPublisherImpl[T](producer, convert)
   }
 
   /**
