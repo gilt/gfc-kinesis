@@ -32,15 +32,17 @@ trait EventReceiver[T] {
    * on subsequent attempts.
    *
    * @param consumer
+   * @return True if added, false if not.
    */
-  def registerConsumer(consumer: T => Unit): Unit
+  def registerConsumer(consumer: T => Unit): Boolean
 
   /**
    * Unregister a previosuly registered consumer function.
    *
    * @param consumer
+   * @return True if removed, false if not.
    */
-  def unregisterConsumer(consumer: T => Unit): Unit
+  def unregisterConsumer(consumer: T => Unit): Boolean
 
   /**
    * Register a consumer
@@ -49,15 +51,17 @@ trait EventReceiver[T] {
    * on subsequent attempts.
    *
    * @param consumer
+   * @return True if added, false if not.
    */
-  def registerConsumer(consumer: EventConsumer[T]): Unit
+  def registerConsumer(consumer: EventConsumer[T]): Boolean
 
   /**
    * Unregister a previously registered consumer.
    *
    * @param consumer
+   * @return True if removed, false if not.
    */
-  def unregisterConsumer(consumer: EventConsumer[T]): Unit
+  def unregisterConsumer(consumer: EventConsumer[T]): Boolean
 
   /**
    * Replace the error handler.
@@ -94,24 +98,30 @@ private[kinesis] class EventReceiverImpl[T](streamName: String,
     errorHandler = handler
   }
 
-  override def registerConsumer(consumer: (T) => Unit): Unit = register(Left(consumer))
-  override def registerConsumer(consumer: EventConsumer[T]): Unit = register(Right(consumer))
+  override def registerConsumer(consumer: (T) => Unit): Boolean = register(Left(consumer))
+  override def registerConsumer(consumer: EventConsumer[T]): Boolean = register(Right(consumer))
 
-  override def unregisterConsumer(consumer: (T) => Unit): Unit = unregister(Left(consumer))
-  override def unregisterConsumer(consumer: EventConsumer[T]): Unit = unregister(Right(consumer))
+  override def unregisterConsumer(consumer: (T) => Unit): Boolean = unregister(Left(consumer))
+  override def unregisterConsumer(consumer: EventConsumer[T]): Boolean = unregister(Right(consumer))
 
-  private def register(consumer: Either[T => Unit, EventConsumer[T]]): Unit = {
+  private def register(consumer: Either[T => Unit, EventConsumer[T]]): Boolean = {
     consumersMutex.synchronized {
       if (!consumers.contains(consumer)) {
         consumers += consumer
+        true
+      } else {
+        false
       }
     }
   }
 
-  private def unregister(consumer: Either[T => Unit, EventConsumer[T]]): Unit = {
+  private def unregister(consumer: Either[T => Unit, EventConsumer[T]]): Boolean = {
     consumersMutex.synchronized {
       if (consumers.contains(consumer)) {
         consumers -= consumer
+        true
+      } else {
+        false
       }
     }
   }
