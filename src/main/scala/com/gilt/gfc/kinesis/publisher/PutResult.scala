@@ -1,4 +1,4 @@
-package com.gilt.gfc.kinesis.producer.raw
+package com.gilt.gfc.kinesis.publisher
 
 import com.gilt.gfc.kinesis.common.{SequenceNumber, ShardId}
 

@@ -1,7 +1,6 @@
 package com.gilt.gfc.kinesis.consumer
 
 import com.gilt.gfc.kinesis.common.ShardId
-import com.gilt.gfc.kinesis.consumer.raw.{RawKinesisStreamConsumer, Checkpoint}
 
 import scala.concurrent.duration._
 
@@ -18,7 +17,7 @@ import org.mockito.Mockito.{doReturn, doAnswer, verify, times}
 import org.mockito.Matchers.{any, eq => mockEq, argThat}
 import org.hamcrest.{Description, BaseMatcher}
 
-class RawKinesisStreamConsumerTest extends FlatSpec with Matchers with MockitoSugar {
+class RawKinesisStreamConsumerSpec extends FlatSpec with Matchers with MockitoSugar {
   private class CheckpointSizeMatcher(targetSize: Long) extends BaseMatcher[Checkpoint] {
     override def matches(p1: Any): Boolean = {
       val actualSize = p1.asInstanceOf[Checkpoint].size()

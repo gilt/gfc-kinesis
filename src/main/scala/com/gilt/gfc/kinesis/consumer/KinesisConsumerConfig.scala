@@ -1,13 +1,13 @@
 package com.gilt.gfc.kinesis.consumer
 
 import java.util.UUID
+
+import com.amazonaws.auth.AWSCredentialsProvider
+import com.amazonaws.services.kinesis.clientlibrary.lib.worker.{InitialPositionInStream, KinesisClientLibConfiguration}
 import com.gilt.gfc.kinesis.common.BaseConfig
 import com.gilt.gfc.logging.Loggable
 
 import scala.concurrent.duration._
-
-import com.amazonaws.auth.{AWSCredentialsProvider, DefaultAWSCredentialsProviderChain}
-import com.amazonaws.services.kinesis.clientlibrary.lib.worker.{InitialPositionInStream, KinesisClientLibConfiguration}
 
 /**
  * Configuration for access around a Kinesis Stream.

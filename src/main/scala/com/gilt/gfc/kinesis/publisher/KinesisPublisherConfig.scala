@@ -1,10 +1,10 @@
-package com.gilt.gfc.kinesis.producer
+package com.gilt.gfc.kinesis.publisher
 
 import com.gilt.gfc.kinesis.common.BaseConfig
 
 import scala.concurrent.duration._
 
-trait KinesisProducerConfig extends BaseConfig {
+trait KinesisPublisherConfig extends BaseConfig {
   /**
    * How many retries that are allowed to be applied on a failure to put record(s) to the stream.
    * @return Defaults to 3 retries

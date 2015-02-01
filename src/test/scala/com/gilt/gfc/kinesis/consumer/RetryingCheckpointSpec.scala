@@ -1,8 +1,6 @@
 package com.gilt.gfc.kinesis.consumer
 
-
 import com.gilt.gfc.kinesis.common.{SequenceNumber, ShardId}
-import com.gilt.gfc.kinesis.consumer.raw.RetryingCheckpoint
 
 import scala.concurrent.duration._
 
@@ -14,7 +12,7 @@ import org.scalatest.mock.MockitoSugar
 import org.mockito.Mockito.{doThrow, verify, never, times}
 import org.mockito.Matchers.anyString
 
-class RetryingCheckpointTest extends FlatSpec with Matchers with MockitoSugar {
+class RetryingCheckpointSpec extends FlatSpec with Matchers with MockitoSugar {
   val eldestRecordTS = System.nanoTime.nanoseconds
 
   "A RetryingCheckpoint" should "delegate calls to checkpoint()" in {

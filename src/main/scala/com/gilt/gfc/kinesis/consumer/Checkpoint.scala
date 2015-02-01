@@ -1,11 +1,11 @@
-package com.gilt.gfc.kinesis.consumer.raw
+package com.gilt.gfc.kinesis.consumer
 
 import com.gilt.gfc.kinesis.common.SequenceNumber
 
 import scala.concurrent.duration.FiniteDuration
 
 /**
- * Allows application to checkpoint a stream's shard at latest read point, or at a specific sequence number.
+ * Allows consumer to checkpoint a stream's shard at latest read point, or at a specific sequence number.
  *
  * Also provided is tracking information on the last checkpoint (its age, and also the number of records passed to
  * application since last checkpoint) of the associated shard.

@@ -1,4 +1,4 @@
-package com.gilt.gfc.kinesis.consumer.raw
+package com.gilt.gfc.kinesis.consumer
 
 import com.amazonaws.services.kinesis.clientlibrary.exceptions.{KinesisClientLibDependencyException, ShutdownException}
 import com.amazonaws.services.kinesis.clientlibrary.interfaces.IRecordProcessorCheckpointer

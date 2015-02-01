@@ -1,4 +1,6 @@
-package com.gilt.gfc.kinesis
+package com.gilt.gfc.kinesis.consumer
+
+import com.gilt.gfc.kinesis.consumer.EventReceiver
 
 /**
  * Signature trait for consuming events of a given type.

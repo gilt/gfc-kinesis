@@ -1,7 +1,6 @@
-package com.gilt.gfc.kinesis
+package com.gilt.gfc.kinesis.publisher
 
-import com.gilt.gfc.kinesis.producer.KinesisProducerConfig
-import com.gilt.gfc.kinesis.producer.raw.{RawRecord, RawKinesisStreamProducer}
+import com.gilt.gfc.kinesis.publisher.KinesisPublisherConfig
 
 import scala.concurrent.Future
 import scala.util.Try
@@ -28,13 +27,13 @@ trait EventPublisher[T] {
 }
 
 private[kinesis] class EventPublisherImpl[T](streamName: String,
-                                             config: KinesisProducerConfig,
+                                             config: KinesisPublisherConfig,
                                              convert: T => RawRecord) extends EventPublisher[T] {
 
   // Global context is acceptable here, as it is only used to map Try[PutResult] to Try[Unit]
   import scala.concurrent.ExecutionContext.Implicits.global
 
-  private val rawProducer = RawKinesisStreamProducer(streamName, config)
+  private val rawProducer = RawKinesisStreamPublisher(streamName, config)
 
   override def publish(event: T): Future[Try[Unit]] = {
     rawProducer.putRecord(convert(event)).map(_.map(_ => Unit))

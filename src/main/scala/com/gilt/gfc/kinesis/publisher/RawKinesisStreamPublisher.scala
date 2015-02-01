@@ -1,4 +1,4 @@
-package com.gilt.gfc.kinesis.producer.raw
+package com.gilt.gfc.kinesis.publisher
 
 import java.nio.ByteBuffer
 import java.util.concurrent.{Executors, ScheduledExecutorService, TimeUnit}
@@ -7,8 +7,8 @@ import com.amazonaws.ClientConfiguration
 import com.amazonaws.regions.Regions
 import com.amazonaws.services.kinesis.model.PutRecordRequest
 import com.amazonaws.services.kinesis.{AmazonKinesis, AmazonKinesisClient}
-import com.gilt.gfc.kinesis.common.{PartitionKey, SequenceNumber, ShardId}
-import com.gilt.gfc.kinesis.producer.KinesisProducerConfig
+import com.gilt.gfc.kinesis.common.{SequenceNumber, ShardId}
+import com.gilt.gfc.kinesis.publisher.KinesisPublisherConfig
 import com.gilt.gfc.logging.Loggable
 
 import scala.concurrent.duration.FiniteDuration
@@ -17,7 +17,7 @@ import scala.util.{Failure, Success, Try}
 
 case class RawRecord(data: Array[Byte], partitionKey: PartitionKey)
 
-trait RawKinesisStreamProducer {
+trait RawKinesisStreamPublisher {
   /**
    * Put a single record onto a Kinesis stream.
    *
@@ -38,8 +38,8 @@ trait RawKinesisStreamProducer {
   def shutdown(): Unit
 }
 
-object RawKinesisStreamProducer {
-  def apply(streamName: String, config: KinesisProducerConfig): RawKinesisStreamProducer = {
+object RawKinesisStreamPublisher {
+  def apply(streamName: String, config: KinesisPublisherConfig): RawKinesisStreamPublisher = {
     val amazonClient = {
       val clientConfig = config.awsClientConfig.getOrElse {
         new ClientConfiguration().withMaxConnections(config.maxConnectionCount)
@@ -51,11 +51,11 @@ object RawKinesisStreamProducer {
       client
     }
 
-    new RetryingStreamProducer(streamName, config, amazonClient)
+    new RetryingStreamPublisher(streamName, config, amazonClient)
   }
 }
 
-private[producer] class RetryingStreamProducer(streamName: String, config: KinesisProducerConfig, kinesis: AmazonKinesis) extends RawKinesisStreamProducer with Retry with Loggable {
+private[publisher] class RetryingStreamPublisher(streamName: String, config: KinesisPublisherConfig, kinesis: AmazonKinesis) extends RawKinesisStreamPublisher with Retry with Loggable {
 
   override val scheduledExecutor = Executors.newScheduledThreadPool(config.streamPlacementThreadCount)
   private implicit val executionContext = ExecutionContext.fromExecutor(scheduledExecutor)
@@ -77,10 +77,12 @@ private[producer] class RetryingStreamProducer(streamName: String, config: Kines
   }
 }
 
-private[producer] trait Retry extends Loggable {
+private[publisher] trait Retry extends Loggable {
   def scheduledExecutor: ScheduledExecutorService
 
-  private[producer] def futureRetry[R](desc: String, config: KinesisProducerConfig)(fn: Int => Try[R])(implicit ec: ExecutionContext): Future[Try[R]] = {
+  private[publisher] def futureRetry[R](desc: String, config: KinesisPublisherConfig)
+                                       (fn: Int => Try[R])
+                                       (implicit ec: ExecutionContext): Future[Try[R]] = {
     def recur(previous: Try[R], retryCount: Int): Future[Try[R]] = {
       previous match {
         case success@Success(_) => {
@@ -100,7 +102,7 @@ private[producer] trait Retry extends Loggable {
     Future(fn(1)).flatMap(recur(_, 0))
   }
 
-  private[producer] def after[R](duration: FiniteDuration)(fn: => R): Future[R] = {
+  private[publisher] def after[R](duration: FiniteDuration)(fn: => R): Future[R] = {
     val promise = Promise[R]
     scheduledExecutor.schedule(new Runnable { def run() = promise.success(fn) }, duration.toMillis, TimeUnit.MILLISECONDS)
     promise.future

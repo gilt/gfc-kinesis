@@ -1,19 +1,13 @@
-package com.gilt.gfc.kinesis
+package com.gilt.gfc.kinesis.consumer
 
-import java.util.concurrent.{Executors, ExecutorService}
-
-import scala.collection.mutable
+import java.util.concurrent.{ExecutorService, Executors}
 
 import com.amazonaws.services.kinesis.model.Record
-import com.gilt.gfc.kinesis.consumer.raw.{Checkpoint, RawKinesisStreamConsumer}
 import com.gilt.gfc.logging.Loggable
 
+import scala.collection.mutable
 import scala.concurrent.duration.DurationInt
-
-import com.gilt.gfc.kinesis.consumer.{CheckpointingStrategy, KinesisConsumerConfig}
-
 import scala.util.Try
-import scala.util.control.NonFatal
 
 /**
  * Receiver of events of a certain type from Kinesis.

@@ -3,7 +3,7 @@ package com.gilt.gfc.kinesis.consumer
 import scala.concurrent.duration.FiniteDuration
 
 /**
- * Representation of a strategy for applying checkpoints to the kinesis stream/shard.
+ * Representation of a strategy for applying checkpoints while consuming the kinesis stream/shard.
  *
  * The choice of strategy and frequency of checkpointing may impact the write pressure on the backing AWS DynamoDB
  * table - please ensure to configure that table appropriately from a throughput/capacity perspective.

@@ -2,11 +2,10 @@ package com.gilt.gfc.kinesis
 
 import java.util.concurrent.{Executors, ExecutorService}
 
-import scala.concurrent.duration.DurationInt
+import com.gilt.gfc.kinesis.consumer.{EventReceiverImpl, EventReceiver, KinesisConsumerConfig, CheckpointingStrategy}
+import com.gilt.gfc.kinesis.publisher.{KinesisPublisherConfig, EventPublisherImpl, EventPublisher, RawRecord}
 
-import com.gilt.gfc.kinesis.consumer.{CheckpointingStrategy, KinesisConsumerConfig}
-import com.gilt.gfc.kinesis.producer.KinesisProducerConfig
-import com.gilt.gfc.kinesis.producer.raw.RawRecord
+import scala.concurrent.duration.DurationInt
 
 
 trait KinesisFactory {
@@ -20,11 +19,11 @@ trait KinesisFactory {
    * @return
    */
   def newPublisher[T](streamName: String,
-                      config: KinesisProducerConfig,
+                      config: KinesisPublisherConfig,
                       convert: T => RawRecord): EventPublisher[T]
 
   /**
-   * Create a new typed received for a given Kinesis Stream.
+   * Create a new typed receiver for a given Kinesis Stream.
    * @param streamName
    * @param config
    * @param converter
@@ -51,7 +50,7 @@ object KinesisFactory extends KinesisFactory {
    * @return
    */
   def newPublisher[T](streamName: String,
-                      config: KinesisProducerConfig,
+                      config: KinesisPublisherConfig,
                       convert: T => RawRecord): EventPublisher[T] = {
     new EventPublisherImpl[T](streamName, config, convert)
   }
