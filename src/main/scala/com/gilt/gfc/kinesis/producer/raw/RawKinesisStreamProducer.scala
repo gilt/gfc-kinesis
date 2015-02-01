@@ -3,6 +3,7 @@ package com.gilt.gfc.kinesis.producer.raw
 import java.nio.ByteBuffer
 import java.util.concurrent.{Executors, ScheduledExecutorService, TimeUnit}
 
+import com.amazonaws.ClientConfiguration
 import com.amazonaws.regions.Regions
 import com.amazonaws.services.kinesis.model.PutRecordRequest
 import com.amazonaws.services.kinesis.{AmazonKinesis, AmazonKinesisClient}
@@ -40,7 +41,11 @@ trait RawKinesisStreamProducer {
 object RawKinesisStreamProducer {
   def apply(streamName: String, config: KinesisProducerConfig): RawKinesisStreamProducer = {
     val amazonClient = {
-      val client = new AmazonKinesisClient(config.awsCredentialsProvider)
+      val clientConfig = config.awsClientConfig.getOrElse {
+        new ClientConfiguration().withMaxConnections(config.maxConnectionCount)
+      }
+
+      val client = new AmazonKinesisClient(config.awsCredentialsProvider, clientConfig)
       client.setRegion(Regions.fromName(config.regionName))
       config.kinesisEndpoint.foreach(client.setEndpoint)
       client

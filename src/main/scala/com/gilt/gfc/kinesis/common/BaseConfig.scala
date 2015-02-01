@@ -1,5 +1,6 @@
 package com.gilt.gfc.kinesis.common
 
+import com.amazonaws.ClientConfiguration
 import com.amazonaws.auth.{AWSCredentialsProvider, DefaultAWSCredentialsProviderChain}
 
 trait BaseConfig {
@@ -26,4 +27,13 @@ trait BaseConfig {
    * @return
    */
   def awsCredentialsProvider: AWSCredentialsProvider = new DefaultAWSCredentialsProviderChain()
+
+  /**
+   * Allow for customised low level configuration of the Amazon AWS Client.
+   *
+   * Note, specifying a value here may override specified other configurations.
+   *
+   * @return Default is to use the default AWS configuration - this is likely a reasonable value in most cases.
+   */
+  def awsClientConfig: Option[ClientConfiguration] = None
 }

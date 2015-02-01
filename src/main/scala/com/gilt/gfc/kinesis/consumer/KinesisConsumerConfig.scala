@@ -172,7 +172,7 @@ trait KinesisConsumerConfig extends BaseConfig with Loggable {
     val aname = appName
     info(s"Application $aname creating a stream configuration for $streamName, with workerId $wid")
 
-    val config = new KinesisClientLibConfiguration(
+    val baseConfig = new KinesisClientLibConfiguration(
       s"$aname-$streamName",
       streamName,
       awsCredentialsProvider,
@@ -193,6 +193,11 @@ trait KinesisConsumerConfig extends BaseConfig with Loggable {
       .withMetricsMaxQueueSize(metricsMaxQueueSize)
 
     // Optional kinesis endpoint
-    kinesisEndpoint.fold(config)(config.withKinesisEndpoint)
+    val endpointConfigured = kinesisEndpoint.fold(baseConfig)(baseConfig.withKinesisEndpoint)
+
+    // Optional common client configuration
+    val fullConfig = awsClientConfig.fold(endpointConfigured)(endpointConfigured.withCommonClientConfig)
+
+    fullConfig
   }
 }
