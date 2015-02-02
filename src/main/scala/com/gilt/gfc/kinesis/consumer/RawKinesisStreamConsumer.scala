@@ -3,17 +3,15 @@ package com.gilt.gfc.kinesis.consumer
 import java.util.concurrent.{ExecutorService, Executors}
 import java.util.{List => JList}
 
-import com.gilt.gfc.kinesis.common.ShardId
-
-import scala.collection.JavaConverters._
-import scala.concurrent.duration._
-
-import com.gilt.gfc.logging.Loggable
-
 import com.amazonaws.services.kinesis.clientlibrary.interfaces.{IRecordProcessor, IRecordProcessorCheckpointer, IRecordProcessorFactory}
 import com.amazonaws.services.kinesis.clientlibrary.lib.worker.Worker
 import com.amazonaws.services.kinesis.clientlibrary.types.ShutdownReason
 import com.amazonaws.services.kinesis.model.Record
+import com.gilt.gfc.kinesis.common.ShardId
+import com.gilt.gfc.logging.Loggable
+
+import scala.collection.JavaConverters._
+import scala.concurrent.duration._
 
 /**
  * A Consumer of data from a Kinesis Stream.
@@ -26,7 +24,7 @@ import com.amazonaws.services.kinesis.model.Record
  * @param processBatch A function that is called for each "batch" of records received from the kinesis stream.
  *                     This function may be called from different threads (for different shards), and possibly even concurrently.
  *                     '''Note''' this function should complete in less time than the configured
- *                     [[com.gilt.gfc.kinesis.consumer.KinesisConsumerConfig.leaseFailoverTime]] as otherwise
+ *                     [[KinesisConsumerConfig.leaseFailoverTime]] as otherwise
  *                     the lease could expire while processing is proceeding.
  */
 case class RawKinesisStreamConsumer(streamName: String,
