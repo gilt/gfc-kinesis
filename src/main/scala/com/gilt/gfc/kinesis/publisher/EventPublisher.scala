@@ -1,5 +1,7 @@
 package com.gilt.gfc.kinesis.publisher
 
+import com.gilt.gfc.kinesis.common.SequenceNumber
+
 import scala.concurrent.Future
 import scala.util.{Success, Failure, Try}
 
@@ -24,7 +26,7 @@ trait EventPublisher[T] {
   /**
    * Publish a sequence of events sequentially.
    *
-   * Ensure that a sequence of events is published in strict order by publishing sequentially, one after another,
+   * Make best efforts to ensure that a sequence of events is published in strict order by publishing sequentially, one after another,
    * only publishing a subsequent event once the previous one has definitely been published.
    *
    * On a failure to publish all subsequent events are left unpublished.
@@ -49,6 +51,28 @@ private[kinesis] class EventPublisherImpl[T](rawProducer: RawKinesisStreamPublis
   }
 
   override def publishSequentially(events: Seq[T]): Future[Int] = {
+    def putEvent(event: T, sequenceNumbers: Map[PartitionKey, SequenceNumber]): Future[Try[(PartitionKey, SequenceNumber)]] = {
+      val record = convert(event)
+      // Uses previous sequence number for ordering (if available, based on partition-key.)
+      rawProducer.putRecord(record, sequenceNumbers.get(record.partitionKey)).map {
+        case Failure(ex) => Failure(ex)
+        case Success(PutResult(_, seqNr, _)) => Success(record.partitionKey -> seqNr)
+      }
+    }
+
+    def recur(remaining: Seq[T], sequenceNumbers: Map[PartitionKey, SequenceNumber], publishedCount: Int): Future[Int] = remaining match {
+      case Nil => Future.successful(publishedCount)
+      case _ => putEvent(remaining.head, sequenceNumbers).flatMap {
+        case Failure(_) => Future.successful(publishedCount)
+        case Success((partKey, seqNr)) => recur(remaining.tail, sequenceNumbers + (partKey -> seqNr), publishedCount + 1)
+      }
+    }
+
+    recur(events, Map.empty, 0)
+  }
+
+  /*
+  override def publishSequentially(events: Seq[T]): Future[Int] = {
     def recur(remaining: Seq[T], publishedCount: Int): Future[Int] = remaining match {
       case Nil => Future.successful(publishedCount)
       case _ => publish(remaining.head).flatMap {
@@ -58,6 +82,7 @@ private[kinesis] class EventPublisherImpl[T](rawProducer: RawKinesisStreamPublis
     }
     recur(events, 0)
   }
+  */
 
   override def shutdown(): Unit = rawProducer.shutdown()
 }
