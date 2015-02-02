@@ -39,25 +39,6 @@ trait EventReceiver[T] {
   def unregisterConsumer(consumer: T => Unit): Boolean
 
   /**
-   * Register a consumer
-   *
-   * A single consumer will only be registered once, if it is already registered it will silently be ignored
-   * on subsequent attempts.
-   *
-   * @param consumer
-   * @return True if added, false if not.
-   */
-  def registerConsumer(consumer: EventConsumer[T]): Boolean
-
-  /**
-   * Unregister a previously registered consumer.
-   *
-   * @param consumer
-   * @return True if removed, false if not.
-   */
-  def unregisterConsumer(consumer: EventConsumer[T]): Boolean
-
-  /**
    * Replace the error handler.
    *
    * The error handler is called for exceptions thrown by application provided conversion, or handler functions.
@@ -82,8 +63,8 @@ private[kinesis] class EventReceiverImpl[T](streamName: String,
 
   @volatile private var errorHandler: Exception => Unit = defaultErrorHandler _
 
-  private val consumers = mutable.ArrayBuffer[Either[T => Unit, EventConsumer[T]]]()
   private val consumersMutex = new Object
+  private val consumers = mutable.ArrayBuffer[T => Unit]()
 
   private val underlyingConsumer = RawKinesisStreamConsumer(streamName, config, executorService)(processBatch)
 
@@ -92,13 +73,7 @@ private[kinesis] class EventReceiverImpl[T](streamName: String,
     errorHandler = handler
   }
 
-  override def registerConsumer(consumer: (T) => Unit): Boolean = register(Left(consumer))
-  override def registerConsumer(consumer: EventConsumer[T]): Boolean = register(Right(consumer))
-
-  override def unregisterConsumer(consumer: (T) => Unit): Boolean = unregister(Left(consumer))
-  override def unregisterConsumer(consumer: EventConsumer[T]): Boolean = unregister(Right(consumer))
-
-  private def register(consumer: Either[T => Unit, EventConsumer[T]]): Boolean = {
+  override def registerConsumer(consumer: (T) => Unit): Boolean = {
     consumersMutex.synchronized {
       if (!consumers.contains(consumer)) {
         consumers += consumer
@@ -109,7 +84,7 @@ private[kinesis] class EventReceiverImpl[T](streamName: String,
     }
   }
 
-  private def unregister(consumer: Either[T => Unit, EventConsumer[T]]): Boolean = {
+  override def unregisterConsumer(consumer: (T) => Unit): Boolean = {
     consumersMutex.synchronized {
       if (consumers.contains(consumer)) {
         consumers -= consumer
@@ -138,10 +113,7 @@ private[kinesis] class EventReceiverImpl[T](streamName: String,
 
       def handleEvent(event: T): Unit = {
         Try {
-          localConsumers.foreach {
-            case Left(consumerFn) => consumerFn(event)
-            case Right(consumer) => consumer.onEvent(event)
-          }
+          localConsumers.foreach(_(event))
         }.recover {
           case e: Exception => errorHandler(e)
         }

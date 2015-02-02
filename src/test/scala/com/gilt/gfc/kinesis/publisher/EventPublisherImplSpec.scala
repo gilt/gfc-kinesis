@@ -73,7 +73,7 @@ class EventPublisherImplSpec extends FlatSpec with Matchers with MockitoSugar wi
     }
 
     val ino = mockInOrder(rawPublisher)
-    ino.verify(rawPublisher).putRecord(rawRecord1, None) // All of different partition-keys... 
+    ino.verify(rawPublisher).putRecord(rawRecord1, None) // All of different partition-keys...
     ino.verify(rawPublisher).putRecord(rawRecord2, None)
     ino.verify(rawPublisher).putRecord(rawRecord3, None)
   }
