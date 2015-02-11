@@ -20,9 +20,6 @@ trait KinesisPublisherConfig extends BaseConfig {
   /**
    * The maximum number of underlying connections to kinesis.
    *
-   * By Default this matches [[streamPlacementThreadCount]] - in general these numbers should match, the thread count
-   * could be larger, as that thread pool is also used for retries.
-   *
    * Note, specifying a [[BaseConfig.awsClientConfig]] will cause this value to be ignored (with the maxConnections value
    * of the specified [[com.amazonaws.ClientConfiguration]] being used directly.
    *
@@ -37,5 +34,5 @@ trait KinesisPublisherConfig extends BaseConfig {
    *
    * @return Defaults to the maximum number of connections, [[maxConnectionCount]]
    */
-  def streamPlacementThreadCount: Int = maxConnectionCount
+//  def streamPlacementThreadCount: Int = maxConnectionCount
 }

@@ -4,11 +4,11 @@ import java.nio.ByteBuffer
 import java.util.concurrent.{Executors, ScheduledExecutorService, TimeUnit}
 
 import com.amazonaws.ClientConfiguration
+import com.amazonaws.handlers.AsyncHandler
 import com.amazonaws.regions.Regions
-import com.amazonaws.services.kinesis.model.PutRecordRequest
-import com.amazonaws.services.kinesis.{AmazonKinesis, AmazonKinesisClient}
+import com.amazonaws.services.kinesis.model.{PutRecordResult, PutRecordRequest}
+import com.amazonaws.services.kinesis.{AmazonKinesisAsync, AmazonKinesisAsyncClient}
 import com.gilt.gfc.kinesis.common.{SequenceNumber, ShardId}
-import com.gilt.gfc.kinesis.publisher.KinesisPublisherConfig
 import com.gilt.gfc.logging.Loggable
 
 import scala.concurrent.duration.FiniteDuration
@@ -45,7 +45,7 @@ object RawKinesisStreamPublisher {
         new ClientConfiguration().withMaxConnections(config.maxConnectionCount)
       }
 
-      val client = new AmazonKinesisClient(config.awsCredentialsProvider, clientConfig)
+      val client = new AmazonKinesisAsyncClient(config.awsCredentialsProvider, clientConfig)
       client.setRegion(Regions.fromName(config.regionName))
       config.kinesisEndpoint.foreach(client.setEndpoint)
       client
@@ -55,9 +55,10 @@ object RawKinesisStreamPublisher {
   }
 }
 
-private[publisher] class RetryingStreamPublisher(streamName: String, config: KinesisPublisherConfig, kinesis: AmazonKinesis) extends RawKinesisStreamPublisher with Retry with Loggable {
+private[publisher] class RetryingStreamPublisher(streamName: String, config: KinesisPublisherConfig, kinesis: AmazonKinesisAsync) extends RawKinesisStreamPublisher with Retry with Loggable {
 
-  override val scheduledExecutor = Executors.newScheduledThreadPool(config.streamPlacementThreadCount)
+  // Only need small pool here - used only for scheduling retries, and small mapping, etc. - no real work.
+  override val scheduledExecutor = Executors.newScheduledThreadPool(5)
   private implicit val executionContext = ExecutionContext.fromExecutor(scheduledExecutor)
 
   override def shutdown(): Unit = kinesis.shutdown()
@@ -70,10 +71,27 @@ private[publisher] class RetryingStreamPublisher(streamName: String, config: Kin
         putRecord.setData(ByteBuffer.wrap(record.data))
         putRecord.setPartitionKey(record.partitionKey.value)
         sequenceNumberForOrdering.foreach(seqnr => putRecord.setSequenceNumberForOrdering(seqnr.value))
-        val result = kinesis.putRecord(putRecord)
-        PutResult(ShardId(result.getShardId), SequenceNumber(result.getSequenceNumber), attemptCount)
-      }
+
+        val asyncAdapter = AsyncHandlerAdapter(attemptCount)
+        kinesis.putRecordAsync(putRecord, asyncAdapter)
+        asyncAdapter.future
+      }.recover {
+        case ex =>
+          Future.successful(Failure(ex))
+      }.get
     }
+  }
+}
+
+private[publisher] case class AsyncHandlerAdapter(attempt: Int) extends AsyncHandler[PutRecordRequest, PutRecordResult] {
+  private val promise = Promise[Try[PutResult]]
+
+  def future = promise.future
+
+  override def onError(exception: Exception): Unit = promise.success(Failure(exception))
+
+  override def onSuccess(request: PutRecordRequest, result: PutRecordResult): Unit = {
+    promise.success(Success(PutResult(ShardId(result.getShardId), SequenceNumber(result.getSequenceNumber), attempt)))
   }
 }
 
@@ -81,7 +99,7 @@ private[publisher] trait Retry extends Loggable {
   def scheduledExecutor: ScheduledExecutorService
 
   private[publisher] def futureRetry[R](desc: String, config: KinesisPublisherConfig)
-                                       (fn: Int => Try[R])
+                                       (fn: Int => Future[Try[R]])
                                        (implicit ec: ExecutionContext): Future[Try[R]] = {
     def recur(previous: Try[R], retryCount: Int): Future[Try[R]] = {
       previous match {
@@ -94,12 +112,12 @@ private[publisher] trait Retry extends Loggable {
           val retriedCount = retryCount + 1
           after(config.retryBackoffDuration) {
             fn(retriedCount + 1)
-          }.flatMap(recur(_, retriedCount))
+          }.flatMap(identity).flatMap(recur(_, retriedCount))
         }
       }
     }
 
-    Future(fn(1)).flatMap(recur(_, 0))
+    fn(1).flatMap(recur(_, 0))
   }
 
   private[publisher] def after[R](duration: FiniteDuration)(fn: => R): Future[R] = {
