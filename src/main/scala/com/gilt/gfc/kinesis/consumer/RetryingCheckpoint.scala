@@ -7,7 +7,7 @@ import com.gilt.gfc.logging.Loggable
 
 import scala.concurrent.duration._
 
-private [consumer] case class RetryingCheckpoint(shardId: ShardId,
+private [consumer] case class RetryingCheckpoint(override val shardId: ShardId,
                                                  checkpointer: IRecordProcessorCheckpointer,
                                                  retryCount: Int,
                                                  backoff: FiniteDuration,

@@ -3,6 +3,7 @@ package com.gilt.gfc.kinesis.consumer
 import java.util.concurrent.{ExecutorService, Executors}
 
 import com.amazonaws.services.kinesis.model.Record
+import com.gilt.gfc.kinesis.common.SequenceNumber
 import com.gilt.gfc.kinesis.publisher.RawRecord
 import com.gilt.gfc.logging.Loggable
 
@@ -129,13 +130,11 @@ private[kinesis] class EventReceiverImpl[T](streamName: String,
         }
       }
 
-      def onConvertedRecord(converted: T): Unit = {
-        handleEvent(converted)
-        if (checkpointingStrategy.afterRecord()) checkpoint()
-      }
-
       Try {
-        converter(RawRecord(record)).foreach(onConvertedRecord)
+        converter(RawRecord(record)).foreach { converted =>
+          handleEvent(converted)
+          if (checkpointingStrategy.afterRecord(checkpoint.shardId, SequenceNumber(record.getSequenceNumber))) checkpoint()
+        }
       }.recoverWith {
         case ex: Exception => Try(errorHandler(ex)).recover {
           case ex2 => error("Unexpected error calling error handler for error during application conversion/consumption of record", ex2)
