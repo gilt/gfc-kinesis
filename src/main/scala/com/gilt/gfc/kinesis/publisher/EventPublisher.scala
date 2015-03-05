@@ -8,7 +8,7 @@ import scala.util.{Success, Failure, Try}
 /**
  * Kinesis Publisher of events of a certain type.
  *
- * See [[KinesisFactory.newPublisher()]]
+ * See [[com.gilt.gfc.kinesis.KinesisFactory.newPublisher()]]
  *
  * @tparam T
  */
@@ -70,19 +70,6 @@ private[kinesis] class EventPublisherImpl[T](rawProducer: RawKinesisStreamPublis
 
     recur(events, Map.empty, 0)
   }
-
-  /*
-  override def publishSequentially(events: Seq[T]): Future[Int] = {
-    def recur(remaining: Seq[T], publishedCount: Int): Future[Int] = remaining match {
-      case Nil => Future.successful(publishedCount)
-      case _ => publish(remaining.head).flatMap {
-        case Failure(_) => Future.successful(publishedCount)
-        case Success(_) => recur(remaining.tail, publishedCount + 1)
-      }
-    }
-    recur(events, 0)
-  }
-  */
 
   override def shutdown(): Unit = rawProducer.shutdown()
 }
