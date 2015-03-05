@@ -1,6 +1,6 @@
 package com.gilt.gfc.kinesis.consumer
 
-import com.gilt.gfc.kinesis.common.SequenceNumber
+import com.gilt.gfc.kinesis.common.{ShardId, SequenceNumber}
 
 import scala.concurrent.duration.FiniteDuration
 
@@ -34,6 +34,12 @@ trait Checkpoint {
    * @return
    */
   def age(): FiniteDuration
+
+  /**
+   * The ShardId that this checkpoint is associated with.
+   * @return
+   */
+  def shardId(): ShardId
 
   /**
    * The number of records that have been passed to the application (for the shard in question) since the last checkpoint

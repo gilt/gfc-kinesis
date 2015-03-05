@@ -1,5 +1,7 @@
 package com.gilt.gfc.kinesis.consumer
 
+import com.gilt.gfc.kinesis.common.{SequenceNumber, ShardId}
+
 import scala.concurrent.duration.FiniteDuration
 
 /**
@@ -10,7 +12,7 @@ import scala.concurrent.duration.FiniteDuration
  */
 trait CheckpointingStrategy {
   def onBatchStart(): Boolean = false
-  def afterRecord(): Boolean = false
+  def afterRecord(shard: ShardId, sequenceNumber: SequenceNumber): Boolean = false
   def afterBatch(lastCheckpointAge: FiniteDuration, uncheckpointedRecordCount: Long): Boolean = false
 }
 
