@@ -6,7 +6,7 @@ import java.util.concurrent.{Executors, ScheduledExecutorService, TimeUnit}
 import com.amazonaws.ClientConfiguration
 import com.amazonaws.handlers.AsyncHandler
 import com.amazonaws.regions.Regions
-import com.amazonaws.services.kinesis.model.{PutRecordResult, PutRecordRequest}
+import com.amazonaws.services.kinesis.model.{Record, PutRecordResult, PutRecordRequest}
 import com.amazonaws.services.kinesis.{AmazonKinesisAsync, AmazonKinesisAsyncClient}
 import com.gilt.gfc.kinesis.common.{SequenceNumber, ShardId}
 import com.gilt.gfc.logging.Loggable
@@ -15,7 +15,22 @@ import scala.concurrent.duration.FiniteDuration
 import scala.concurrent.{ExecutionContext, Future, Promise}
 import scala.util.{Failure, Success, Try}
 
-case class RawRecord(data: Array[Byte], partitionKey: PartitionKey)
+trait RawRecord {
+  def data: Array[Byte]
+  def partitionKey: PartitionKey
+}
+
+object RawRecord {
+  def apply(data: Array[Byte], partitionKey: PartitionKey): RawRecord = new SimpleRawRecord(data, partitionKey)
+  def apply(awsRecord: Record): RawRecord = new AwsWrappingRawRecord(awsRecord)
+}
+
+private[publisher] class SimpleRawRecord(override val data: Array[Byte], override val partitionKey: PartitionKey) extends RawRecord
+
+private[publisher] class AwsWrappingRawRecord(awsRecord: Record) extends RawRecord {
+  override lazy val data: Array[Byte] = awsRecord.getData.array
+  override lazy val partitionKey: PartitionKey = PartitionKey(awsRecord.getPartitionKey)
+}
 
 trait RawKinesisStreamPublisher {
   /**

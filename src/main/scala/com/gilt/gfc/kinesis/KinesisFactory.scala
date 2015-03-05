@@ -26,7 +26,8 @@ trait KinesisFactory {
    * Create a new typed receiver for a given Kinesis Stream.
    * @param streamName
    * @param config
-   * @param converter
+   * @param converter Convert a [[RawRecord]] to an [[Option]] of [[T]] - this allows filtering based on,
+   *                  for example, [[com.gilt.gfc.kinesis.publisher.PartitionKey]], etc.
    * @param checkpointingStrategy
    * @param executorService
    * @tparam T
@@ -34,7 +35,7 @@ trait KinesisFactory {
    */
   def newReceiver[T](streamName: String,
                      config: KinesisConsumerConfig,
-                     converter: Array[Byte] => T,
+                     converter: RawRecord => Option[T],
                      checkpointingStrategy: CheckpointingStrategy = CheckpointingStrategy.Age(1.minute),
                      executorService: ExecutorService = Executors.newCachedThreadPool()): EventReceiver[T]
 }
@@ -61,7 +62,8 @@ object KinesisFactory extends KinesisFactory {
    *
    * @param streamName
    * @param config
-   * @param converter
+   * @param converter Convert a [[RawRecord]] to an [[Option]] of [[T]] - this allows filtering based on,
+   *                  for example, [[com.gilt.gfc.kinesis.publisher.PartitionKey]], etc.
    * @param checkpointingStrategy
    * @param executorService
    * @tparam T
@@ -69,7 +71,7 @@ object KinesisFactory extends KinesisFactory {
    */
   def newReceiver[T](streamName: String,
                      config: KinesisConsumerConfig,
-                     converter: Array[Byte] => T,
+                     converter: RawRecord => Option[T],
                      checkpointingStrategy: CheckpointingStrategy = CheckpointingStrategy.Age(1.minute),
                      executorService: ExecutorService = Executors.newCachedThreadPool()): EventReceiver[T] = {
     new EventReceiverImpl[T](streamName, config, converter, checkpointingStrategy, executorService)

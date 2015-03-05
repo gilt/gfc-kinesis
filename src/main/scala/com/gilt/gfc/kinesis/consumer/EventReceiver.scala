@@ -3,6 +3,7 @@ package com.gilt.gfc.kinesis.consumer
 import java.util.concurrent.{ExecutorService, Executors}
 
 import com.amazonaws.services.kinesis.model.Record
+import com.gilt.gfc.kinesis.publisher.RawRecord
 import com.gilt.gfc.logging.Loggable
 
 import scala.collection.mutable
@@ -54,12 +55,21 @@ trait EventReceiver[T] {
   def shutdown(): Unit
 }
 
+/**
+ *
+ * @param streamName
+ * @param config
+ * @param converter Convert a [[RawRecord]] to an [[Option]] of [[T]] - this allows filtering based on,
+ *                  for example, [[com.gilt.gfc.kinesis.publisher.PartitionKey]], etc.
+ * @param checkpointingStrategy
+ * @param executorService
+ * @tparam T
+ */
 private[kinesis] class EventReceiverImpl[T](streamName: String,
                                             config: KinesisConsumerConfig,
-                                            converter: Array[Byte] => T,
+                                            converter: RawRecord => Option[T],
                                             checkpointingStrategy: CheckpointingStrategy = CheckpointingStrategy.Age(1.minute),
                                             executorService: ExecutorService = Executors.newCachedThreadPool()) extends EventReceiver[T] with Loggable {
-
 
   @volatile private var errorHandler: Exception => Unit = defaultErrorHandler _
 
@@ -125,7 +135,7 @@ private[kinesis] class EventReceiverImpl[T](streamName: String,
       }
 
       Try {
-        onConvertedRecord(converter(record.getData.array))
+        converter(RawRecord(record)).foreach(onConvertedRecord)
       }.recoverWith {
         case ex: Exception => Try(errorHandler(ex)).recover {
           case ex2 => error("Unexpected error calling error handler for error during application conversion/consumption of record", ex2)
