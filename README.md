@@ -35,7 +35,7 @@ val config = new KinesisConsumerConfig {
     override val regionName = "us-west-1"
 }
 
-def convert(bytes: Array[Byte]): String = new String(bytes)
+def convert(record: RawRecord): Option[String] = Some(new String(record.data))
 
 val receiver = KinesisFactory.newReceiver("my-stream-name", config, convert)
 
@@ -46,7 +46,7 @@ receiver.registerConsumer(onEvent)
 receiver.start()
 ```
 
-By default, the Kinesis receiver here checkpoints the stream/shard every 1 minute. This can be changed by specifying a different `com.gilt.gfc.kinesis.consumer.CheckpointingStrategy` which allows for various strategies, including age, event throughput, per-batch, or various other combinations.
+By default, the Kinesis receiver here checkpoints the stream/shard every 1 minute. This can be changed by specifying a different `com.gilt.gfc.kinesis.consumer.CheckpointingStrategy` which allows for various strategies, including age, event throughput, per-batch, per-shard sequence-number tracking, or various other combinations.
 
 ## Closer to Kinesis
 
