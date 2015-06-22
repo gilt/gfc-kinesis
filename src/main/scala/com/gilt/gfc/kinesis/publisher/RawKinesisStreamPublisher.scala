@@ -122,7 +122,7 @@ private[publisher] trait Retry extends Loggable {
           Future.successful(success)
         }
         case failure@Failure(ex) if retryCount < config.allowedRetriesOnFailure => {
-          error(s"$desc failed, attempting retry in ${config.retryBackoffDuration}", ex)
+          warn(s"$desc failed, attempting retry in ${config.retryBackoffDuration}", ex)
 
           val retriedCount = retryCount + 1
           after(config.retryBackoffDuration) {
