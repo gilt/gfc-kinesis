@@ -1,3 +1,10 @@
+DEPRECATED
+==========
+
+This project is deprecated. We will not accept pull requests or make any changes to this repo going forward. If you are using gfc-kinesis already and want to add new features or fix any bugs you may find, feel free to fork the repo and continue development there. 
+
+Otherwise, we recommend using https://github.com/gilt/gfc-aws-kinesis instead, a much more lightweight scala wrapper for the AWS Kinesis Client Library, that Gilt will continue to actively support.
+
 gfc-kinesis
 ===========
 
